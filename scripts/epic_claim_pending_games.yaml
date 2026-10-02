@@ -1,0 +1,12 @@
+alias: Epic Games - Claim pending games
+description: >-
+  Dashboard / Apple Watch / Wear OS / manual entry point for confirming pending Epic
+  games. It runs the actions of the main claim automation.
+icon: mdi:gamepad-variant
+
+sequence:
+  - action: automation.trigger
+    target:
+      entity_id: automation.epic_games_mark_game_as_claimed
+
+mode: single

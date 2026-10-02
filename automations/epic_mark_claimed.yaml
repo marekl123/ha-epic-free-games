@@ -1,0 +1,106 @@
+alias: Epic Games - Mark game as claimed
+description: >-
+  Adds all pending notified Epic games to Owned and marks their notification
+  records completed. Also restores previously confirmed games accidentally
+  removed from Owned.
+
+triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: EPIC_CLAIMED_ALL
+
+actions:
+  - action: todo.get_items
+    target:
+      entity_id: todo.epic_games_owned
+    data:
+      status: needs_action
+    response_variable: owned_response
+
+  - action: todo.get_items
+    target:
+      entity_id: todo.epic_games_notified
+    data:
+      status: needs_action
+    response_variable: pending_response
+
+  - action: todo.get_items
+    target:
+      entity_id: todo.epic_games_notified
+    data:
+      status: completed
+    response_variable: completed_response
+
+  - variables:
+      owned_titles: >-
+        {{ owned_response['todo.epic_games_owned']['items']
+           | map(attribute='summary')
+           | list }}
+
+      pending_items: >-
+        {{ pending_response['todo.epic_games_notified']['items'] }}
+
+      completed_items: >-
+        {{ completed_response['todo.epic_games_notified']['items'] }}
+
+      pending_titles: >-
+        {% set ns = namespace(titles=[]) %}
+        {% for item in pending_items %}
+          {% set title = item.summary.split('|')[0] %}
+          {% if title not in ns.titles %}
+            {% set ns.titles = ns.titles + [title] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.titles }}
+
+      repair_titles: >-
+        {% set ns = namespace(titles=[]) %}
+        {% for item in completed_items %}
+          {% set title = item.summary.split('|')[0] %}
+          {% if title not in owned_titles
+                and title not in pending_titles
+                and title not in ns.titles %}
+            {% set ns.titles = ns.titles + [title] %}
+          {% endif %}
+        {% endfor %}
+        {{ ns.titles }}
+
+  - repeat:
+      for_each: "{{ pending_titles }}"
+      sequence:
+        - if:
+            - condition: template
+              value_template: "{{ repeat.item not in owned_titles }}"
+          then:
+            - action: todo.add_item
+              target:
+                entity_id: todo.epic_games_owned
+              data:
+                item: "{{ repeat.item }}"
+                description: >-
+                  Claimed free on {{ now().strftime('%Y-%m-%d') }}
+
+  - repeat:
+      for_each: "{{ pending_items }}"
+      sequence:
+        - action: todo.update_item
+          target:
+            entity_id: todo.epic_games_notified
+          data:
+            item: "{{ repeat.item.uid }}"
+            status: completed
+
+  - repeat:
+      for_each: "{{ repair_titles }}"
+      sequence:
+        - action: todo.add_item
+          target:
+            entity_id: todo.epic_games_owned
+          data:
+            item: "{{ repeat.item }}"
+            description: >-
+              Restored from Epic claimed history on
+              {{ now().strftime('%Y-%m-%d') }}
+
+mode: single

@@ -1,0 +1,11 @@
+# Merge this into your Home Assistant configuration.yaml.
+# If you already have a top-level `rest_command:` section, add only
+# the `epic_free_games:` block beneath it.
+
+rest_command:
+  epic_free_games:
+    url: "https://store-site-backend-static.ak.epicgames.com/freeGamesPromotions?locale=en-US&country=NL&allowCountries=NL"
+    method: GET
+    headers:
+      accept: "application/json"
+    timeout: 15

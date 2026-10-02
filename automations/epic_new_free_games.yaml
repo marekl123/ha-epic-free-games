@@ -1,0 +1,119 @@
+alias: Epic Games - New free paid games
+description: >-
+  Checks Epic Games every 6 hours for normally paid games temporarily at €0.
+  Sends one notification containing all new games. Games stay pending in
+  Notified until their claim is confirmed.
+
+triggers:
+  - trigger: time_pattern
+    hours: "/6"
+
+actions:
+  - action: rest_command.epic_free_games
+    response_variable: epic_response
+
+  - action: todo.get_items
+    target:
+      entity_id: todo.epic_games_owned
+    data:
+      status: needs_action
+    response_variable: owned_response
+
+  - action: todo.get_items
+    target:
+      entity_id: todo.epic_games_notified
+    data:
+      status: needs_action
+    response_variable: notified_pending_response
+
+  - action: todo.get_items
+    target:
+      entity_id: todo.epic_games_notified
+    data:
+      status: completed
+    response_variable: notified_completed_response
+
+  - variables:
+      owned_titles: >-
+        {{ owned_response['todo.epic_games_owned']['items']
+           | map(attribute='summary')
+           | list }}
+
+      notified_pending_keys: >-
+        {{ notified_pending_response['todo.epic_games_notified']['items']
+           | map(attribute='summary')
+           | list }}
+
+      notified_completed_keys: >-
+        {{ notified_completed_response['todo.epic_games_notified']['items']
+           | map(attribute='summary')
+           | list }}
+
+      new_games: >-
+        {% set games = epic_response.content.data.Catalog.searchStore.elements %}
+        {% set ns = namespace(items=[]) %}
+
+        {% for game in games %}
+          {% set price = game.price.totalPrice %}
+          {% set promos = game.promotions.promotionalOffers
+             if game.promotions is not none else [] %}
+
+          {% if price.originalPrice | int > 0
+                and price.discountPrice | int == 0
+                and promos | count > 0
+                and game.title not in owned_titles %}
+
+            {% set promo = promos[0].promotionalOffers[0] %}
+            {% set key = game.title ~ '|' ~ promo.endDate %}
+
+            {% if key not in notified_pending_keys
+                  and key not in notified_completed_keys %}
+
+              {% set ns.items = ns.items + [{
+                'title': game.title,
+                'original_price': price.fmtPrice.originalPrice,
+                'key': key
+              }] %}
+
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+
+        {{ ns.items }}
+
+  - if:
+      - condition: template
+        value_template: "{{ new_games | count > 0 }}"
+    then:
+      - action: notify.mobile_app_your_phone
+        data:
+          title: >-
+            🎮 {{ new_games | count }} free Epic
+            game{{ '' if new_games | count == 1 else 's' }}
+          message: >-
+            {% set ns = namespace(lines=[]) %}
+            {% for game in new_games %}
+              {% set ns.lines = ns.lines + [
+                game.title ~ ' - normally ' ~
+                game.original_price ~ ', now €0'
+              ] %}
+            {% endfor %}
+            {{ ns.lines | join('\n') }}
+          data:
+            actions:
+              - action: EPIC_CLAIMED_ALL
+                title: Claimed all
+
+      - repeat:
+          for_each: "{{ new_games }}"
+          sequence:
+            - action: todo.add_item
+              target:
+                entity_id: todo.epic_games_notified
+              data:
+                item: "{{ repeat.item.key }}"
+                description: >-
+                  {{ repeat.item.title }}
+                  Notified {{ now().strftime('%Y-%m-%d %H:%M') }}
+
+mode: single

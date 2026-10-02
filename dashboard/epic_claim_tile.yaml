@@ -1,0 +1,17 @@
+type: tile
+entity: binary_sensor.epic_games_unclaimed
+name: Claim Epic games
+icon: mdi:gamepad-variant
+color: red
+hide_state: true
+vertical: false
+
+tap_action:
+  action: perform-action
+  perform_action: script.turn_on
+  target:
+    entity_id: script.epic_games_claim_pending_games
+
+grid_options:
+  columns: 2
+  rows: 1

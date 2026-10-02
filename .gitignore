@@ -1,0 +1,14 @@
+# Home Assistant private / runtime data
+.storage/
+secrets.yaml
+*.db
+*.db-shm
+*.db-wal
+home-assistant.log*
+backups/
+*.tar
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
