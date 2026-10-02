@@ -2,6 +2,16 @@
 
 A Home Assistant project that checks the Epic Games Store for **normally paid games that are temporarily free**, avoids duplicate alerts, tracks which games you own, and lets you confirm claimed games from your phone, dashboard, Apple Watch, Wear OS watch, or a manual script run.
 
+## Screenshots
+
+### Home Assistant dashboard
+
+<img src="images/ha-dashboard.png" alt="Home Assistant dashboard tile" width="700">
+
+### Mobile notification
+
+<img src="images/apple-watch-actions.png" alt="Epic Games mobile notification" width="220">
+
 ## Start here
 
 **Installing this project? Read [`INSTALL.md`](INSTALL.md) from top to bottom.**
